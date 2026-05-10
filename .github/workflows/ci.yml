@@ -21,10 +21,24 @@ jobs:
           cache: true
 
       - name: go vet
-        run: go vet ./...
+        run: |
+          set +e
+          out=$(go vet ./... 2>&1)
+          rc=$?
+          echo "::group::go vet output"
+          echo "$out"
+          echo "::endgroup::"
+          [ $rc -eq 0 ] || { echo "VET_FAILED:"; echo "$out"; exit $rc; }
 
       - name: Unit tests with race detector
-        run: go test -race -coverprofile=coverage.out ./internal/...
+        run: |
+          set +e
+          out=$(go test -race -coverprofile=coverage.out ./internal/... 2>&1)
+          rc=$?
+          echo "::group::go test output"
+          echo "$out"
+          echo "::endgroup::"
+          [ $rc -eq 0 ] || { echo "TEST_FAILED:"; echo "$out"; exit $rc; }
 
       - name: Coverage summary
         run: go tool cover -func=coverage.out | tail -1
@@ -44,9 +58,17 @@ jobs:
           go-version-file: go.mod
           cache: true
       - name: Install staticcheck
-        run: go install honnef.co/go/tools/cmd/staticcheck@latest
+        run: go install honnef.co/go/tools/cmd/staticcheck@2025.1.1
       - name: Run staticcheck
-        run: staticcheck ./...
+        run: |
+          set +e
+          $(go env GOPATH)/bin/staticcheck -version
+          out=$($(go env GOPATH)/bin/staticcheck ./... 2>&1)
+          rc=$?
+          echo "::group::staticcheck output"
+          echo "$out"
+          echo "::endgroup::"
+          [ $rc -eq 0 ] || { echo "STATICCHECK_FAILED:"; echo "$out"; exit $rc; }
 
   cgo-build:
     name: cgo plugin builds
