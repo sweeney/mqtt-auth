@@ -20,10 +20,12 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      # ./plugin needs cgo + mosquitto headers; vet/test it in the cgo-build job.
+      # This job is pure-Go and runs on a vanilla runner.
       - name: go vet
         run: |
           set +e
-          out=$(go vet ./... 2>&1)
+          out=$(go vet ./internal/... 2>&1)
           rc=$?
           if [ $rc -ne 0 ]; then
             {
@@ -76,7 +78,8 @@ jobs:
         run: |
           set +e
           ver=$($(go env GOPATH)/bin/staticcheck -version)
-          out=$($(go env GOPATH)/bin/staticcheck ./... 2>&1)
+          # ./plugin needs cgo + mosquitto headers; lint it in the cgo-build job.
+          out=$($(go env GOPATH)/bin/staticcheck ./internal/... 2>&1)
           rc=$?
           if [ $rc -ne 0 ]; then
             {
@@ -107,6 +110,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y mosquitto-dev libmosquitto-dev
+
+      - name: go vet ./plugin
+        run: go vet ./plugin/...
 
       - name: Build mqtt-auth.so
         run: make plugin
