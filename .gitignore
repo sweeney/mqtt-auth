@@ -1,0 +1,9 @@
+*.so
+*.a
+*.h
+!plugin/auth-plugin.h
+bin/
+coverage.out
+coverage.html
+.idea/
+.vscode/
