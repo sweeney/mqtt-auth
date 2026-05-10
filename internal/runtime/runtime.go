@@ -128,7 +128,7 @@ func CheckACL(username, topic string, access int) int {
 // tested without cgo. Returns an error on length mismatch.
 func OptsToMap(keys, values []string) (map[string]string, error) {
 	if len(keys) != len(values) {
-		return nil, errors.New("OptsToMap: keys/values length mismatch")
+		return nil, errors.New("keys/values length mismatch")
 	}
 	m := make(map[string]string, len(keys))
 	for i, k := range keys {
