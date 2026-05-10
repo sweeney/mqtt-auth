@@ -87,10 +87,10 @@ const (
 // JWKS is fetched lazily on the first Parse call.
 func NewJWKSVerifier(cfg JWKSVerifierConfig) (*JWKSVerifier, error) {
 	if cfg.Issuer == "" {
-		return nil, errors.New("Issuer is required")
+		return nil, errors.New("issuer is required")
 	}
 	if cfg.JWKSURL == "" {
-		return nil, errors.New("JWKSURL is required")
+		return nil, errors.New("jwks url is required")
 	}
 	client := cfg.HTTPClient
 	if client == nil {

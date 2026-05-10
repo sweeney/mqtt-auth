@@ -41,7 +41,7 @@ type Authenticator struct {
 // NewAuthenticator constructs an Authenticator.
 func NewAuthenticator(cfg AuthenticatorConfig) (*Authenticator, error) {
 	if cfg.Verifier == nil {
-		return nil, errors.New("Verifier is required")
+		return nil, errors.New("verifier is required")
 	}
 	return &Authenticator{
 		verifier:             cfg.Verifier,

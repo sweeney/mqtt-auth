@@ -126,7 +126,10 @@ func TestSetJWKSDelay_delaysResponse(t *testing.T) {
 	id := NewTestIdentity(t)
 	id.SetJWKSDelay(50 * time.Millisecond)
 	start := time.Now()
-	resp, _ := http.Get(id.JWKSURL())
+	resp, err := http.Get(id.JWKSURL())
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
 	resp.Body.Close()
 	if elapsed := time.Since(start); elapsed < 40*time.Millisecond {
 		t.Errorf("response returned in %v, expected at least ~50ms", elapsed)
@@ -141,7 +144,10 @@ func TestRotateKey_keepsOldKeyInSet(t *testing.T) {
 		t.Fatalf("CurrentKID did not change after rotation")
 	}
 
-	resp, _ := http.Get(id.JWKSURL())
+	resp, err := http.Get(id.JWKSURL())
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
 	defer resp.Body.Close()
 	var set JWKSet
 	_ = json.NewDecoder(resp.Body).Decode(&set)
@@ -150,7 +156,10 @@ func TestRotateKey_keepsOldKeyInSet(t *testing.T) {
 	}
 
 	id.DropOldestKey()
-	resp2, _ := http.Get(id.JWKSURL())
+	resp2, err := http.Get(id.JWKSURL())
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
 	defer resp2.Body.Close()
 	var set2 JWKSet
 	_ = json.NewDecoder(resp2.Body).Decode(&set2)
