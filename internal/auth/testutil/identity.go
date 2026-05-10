@@ -61,7 +61,7 @@ type signingKey struct {
 // and returns the identity. The caller must Close it when done. The Issuer
 // field is initialised to the server's URL so it matches the iss claim of
 // minted tokens by default.
-func NewTestIdentity(t *testing.T) *TestIdentity {
+func NewTestIdentity(t testing.TB) *TestIdentity {
 	t.Helper()
 	id := &TestIdentity{}
 	id.addKey(t)
@@ -113,7 +113,7 @@ func (id *TestIdentity) SetJWKSDelay(d time.Duration) {
 // RotateKey adds a fresh signing key and makes it the current (first) key.
 // The previous key remains in the JWKS until DropOldestKey is called, so
 // outstanding tokens still verify across a rotation.
-func (id *TestIdentity) RotateKey(t *testing.T) {
+func (id *TestIdentity) RotateKey(t testing.TB) {
 	t.Helper()
 	id.addKey(t)
 	// addKey prepends, so the new key is at index 0. Nothing else needed.
@@ -155,7 +155,7 @@ type ServiceClaims struct {
 }
 
 // MintUserToken signs a user access token with the current key.
-func (id *TestIdentity) MintUserToken(t *testing.T, c UserClaims) string {
+func (id *TestIdentity) MintUserToken(t testing.TB, c UserClaims) string {
 	t.Helper()
 	ttl := c.TTL
 	if ttl == 0 {
@@ -180,7 +180,7 @@ func (id *TestIdentity) MintUserToken(t *testing.T, c UserClaims) string {
 }
 
 // MintServiceToken signs an RFC 9068 service token with the current key.
-func (id *TestIdentity) MintServiceToken(t *testing.T, c ServiceClaims) string {
+func (id *TestIdentity) MintServiceToken(t testing.TB, c ServiceClaims) string {
 	t.Helper()
 	ttl := c.TTL
 	if ttl == 0 {
@@ -206,7 +206,7 @@ func (id *TestIdentity) MintServiceToken(t *testing.T, c ServiceClaims) string {
 
 // MintCustom signs an arbitrary claim/header set, for negative tests that
 // need to fiddle with iss, exp, kid, etc.
-func (id *TestIdentity) MintCustom(t *testing.T, claims jwt.MapClaims, header map[string]any) string {
+func (id *TestIdentity) MintCustom(t testing.TB, claims jwt.MapClaims, header map[string]any) string {
 	t.Helper()
 	return id.signWithCurrent(t, claims, header)
 }
@@ -214,7 +214,7 @@ func (id *TestIdentity) MintCustom(t *testing.T, claims jwt.MapClaims, header ma
 // MintWithKey signs claims with a caller-provided key and kid. The kid will
 // NOT exist in the JWKS unless the caller adds it via InjectKey. Used to test
 // signature rejection by an unknown signer.
-func (id *TestIdentity) MintWithKey(t *testing.T, priv *ecdsa.PrivateKey, kid string, claims jwt.MapClaims, header map[string]any) string {
+func (id *TestIdentity) MintWithKey(t testing.TB, priv *ecdsa.PrivateKey, kid string, claims jwt.MapClaims, header map[string]any) string {
 	t.Helper()
 	tok := jwt.NewWithClaims(jwt.SigningMethodES256, claims)
 	tok.Header["kid"] = kid
@@ -231,7 +231,7 @@ func (id *TestIdentity) MintWithKey(t *testing.T, priv *ecdsa.PrivateKey, kid st
 // GenerateForeignKey returns a fresh ECDSA P-256 key not registered with this
 // identity. Tests use this to mint tokens with valid-looking but untrusted
 // signatures.
-func GenerateForeignKey(t *testing.T) *ecdsa.PrivateKey {
+func GenerateForeignKey(t testing.TB) *ecdsa.PrivateKey {
 	t.Helper()
 	k, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
@@ -240,7 +240,7 @@ func GenerateForeignKey(t *testing.T) *ecdsa.PrivateKey {
 	return k
 }
 
-func (id *TestIdentity) signWithCurrent(t *testing.T, claims jwt.MapClaims, header map[string]any) string {
+func (id *TestIdentity) signWithCurrent(t testing.TB, claims jwt.MapClaims, header map[string]any) string {
 	t.Helper()
 	id.mu.RLock()
 	cur := id.keys[0]
@@ -258,7 +258,7 @@ func (id *TestIdentity) signWithCurrent(t *testing.T, claims jwt.MapClaims, head
 	return s
 }
 
-func (id *TestIdentity) addKey(t *testing.T) {
+func (id *TestIdentity) addKey(t testing.TB) {
 	t.Helper()
 	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
