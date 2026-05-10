@@ -25,20 +25,33 @@ jobs:
           set +e
           out=$(go vet ./... 2>&1)
           rc=$?
-          echo "::group::go vet output"
-          echo "$out"
-          echo "::endgroup::"
-          [ $rc -eq 0 ] || { echo "VET_FAILED:"; echo "$out"; exit $rc; }
+          if [ $rc -ne 0 ]; then
+            {
+              echo "## go vet failed"
+              echo '```'
+              echo "$out"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "$out"
+            exit $rc
+          fi
 
       - name: Unit tests with race detector
         run: |
           set +e
           out=$(go test -race -coverprofile=coverage.out ./internal/... 2>&1)
           rc=$?
-          echo "::group::go test output"
+          if [ $rc -ne 0 ]; then
+            {
+              echo "## go test failed"
+              echo '```'
+              echo "$out"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "$out"
+            exit $rc
+          fi
           echo "$out"
-          echo "::endgroup::"
-          [ $rc -eq 0 ] || { echo "TEST_FAILED:"; echo "$out"; exit $rc; }
 
       - name: Coverage summary
         run: go tool cover -func=coverage.out | tail -1
@@ -62,13 +75,22 @@ jobs:
       - name: Run staticcheck
         run: |
           set +e
-          $(go env GOPATH)/bin/staticcheck -version
+          ver=$($(go env GOPATH)/bin/staticcheck -version)
           out=$($(go env GOPATH)/bin/staticcheck ./... 2>&1)
           rc=$?
-          echo "::group::staticcheck output"
+          if [ $rc -ne 0 ]; then
+            {
+              echo "## staticcheck failed"
+              echo "Version: $ver"
+              echo '```'
+              echo "$out"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "$out"
+            exit $rc
+          fi
+          echo "$ver"
           echo "$out"
-          echo "::endgroup::"
-          [ $rc -eq 0 ] || { echo "STATICCHECK_FAILED:"; echo "$out"; exit $rc; }
 
   cgo-build:
     name: cgo plugin builds
