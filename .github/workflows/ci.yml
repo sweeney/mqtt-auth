@@ -168,11 +168,22 @@ jobs:
             echo "exit=$?"
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
-          # Assert the artifacts ended up where we expect — fails the step
-          # without losing the captured output above.
-          test -f /usr/lib/mosquitto/plugins/mqtt-auth.so && \
-          test -x /usr/bin/mqtt-auth-verify && \
-          test -f /etc/mosquitto/conf.d/10-mqtt-auth.conf || exit 1
+          # Assert the artifacts ended up where we expect. ::error:: lines
+          # show up at the top of the run page so failures are visible
+          # without needing access to the full step log.
+          rc=0
+          [ -f /usr/lib/mosquitto/plugins/mqtt-auth.so ] || { echo "::error::missing /usr/lib/mosquitto/plugins/mqtt-auth.so"; rc=1; }
+          [ -x /usr/bin/mqtt-auth-verify ]              || { echo "::error::missing /usr/bin/mqtt-auth-verify"; rc=1; }
+          [ -f /etc/mosquitto/conf.d/10-mqtt-auth.conf ] || { echo "::error::missing /etc/mosquitto/conf.d/10-mqtt-auth.conf"; rc=1; }
+          # Also dump the entire dpkg file list as a paranoid sanity check.
+          {
+            echo
+            echo "### dpkg -L mqtt-auth (post-install)"
+            echo '```'
+            dpkg -L mqtt-auth 2>&1 || echo "(package not installed)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $rc
 
       - uses: actions/upload-artifact@v4
         with:
