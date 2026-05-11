@@ -3,6 +3,7 @@
 *.h
 !plugin/auth-plugin.h
 bin/
+dist/
 coverage.out
 coverage.html
 .idea/
