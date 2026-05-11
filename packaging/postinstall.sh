@@ -1,20 +1,18 @@
 #!/bin/sh
 # Post-install hook for the mqtt-auth Debian package.
 #
-# Restarts mosquitto so the plugin takes effect. Uses try-restart so:
-#   - if mosquitto isn't running, nothing happens (operator may not have
-#     started it yet)
-#   - if it is running, it's restarted in-place
-#
-# Failures are tolerated: in containers or sysvinit systems systemctl may
-# not be present, and we don't want the install to abort.
+# Tries to restart mosquitto so the plugin takes effect, but never fails
+# the install: in containers, CI runners, or partially-set-up systems
+# systemctl behaviour is unpredictable, and we'd rather print a hint to
+# the operator than break their apt install.
 
-set -e
+# Note: no `set -e` — every command here is allowed to fail.
 
 if command -v systemctl >/dev/null 2>&1; then
-    if systemctl is-active --quiet mosquitto 2>/dev/null; then
+    active=$(systemctl is-active mosquitto 2>/dev/null || true)
+    if [ "$active" = "active" ]; then
         echo "mqtt-auth: restarting mosquitto so the plugin takes effect..."
-        systemctl try-restart mosquitto || \
+        systemctl try-restart mosquitto 2>/dev/null || \
             echo "mqtt-auth: warning: failed to restart mosquitto; restart it manually"
     else
         echo "mqtt-auth: mosquitto is not currently active — start it when ready."

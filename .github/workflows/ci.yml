@@ -143,11 +143,16 @@ jobs:
         run: VERSION=0.0.0-ci make package
 
       - name: dpkg --install / --remove roundtrip
+        # Verbose output helps when this step fails in CI but the same
+        # commands pass locally — surfaces postinst stderr that's otherwise
+        # silently hidden.
         run: |
+          set -x
           sudo dpkg -i dist/mqtt-auth_0.0.0-ci_amd64.deb
           test -f /usr/lib/mosquitto/plugins/mqtt-auth.so
           test -x /usr/bin/mqtt-auth-verify
           test -f /etc/mosquitto/conf.d/10-mqtt-auth.conf
+          mqtt-auth-verify -h | head -3
           sudo dpkg -r mqtt-auth
 
       - uses: actions/upload-artifact@v4
