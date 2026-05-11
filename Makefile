@@ -62,8 +62,8 @@ package: plugin verify
 	nfpm pkg --config $(DIST_DIR)/nfpm.rendered.yaml --packager deb --target $(DIST_DIR)/
 	@rm $(DIST_DIR)/nfpm.rendered.yaml
 	@echo
-	@echo "Built $(DIST_DIR)/mqtt-auth_$(VERSION)_amd64.deb"
-	@ls -la $(DIST_DIR)/
+	@echo "Built:"
+	@ls $(DIST_DIR)/mqtt-auth_*.deb
 
 # Build a tarball — distro-agnostic fallback when .deb isn't an option.
 tarball: plugin verify

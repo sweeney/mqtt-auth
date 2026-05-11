@@ -140,7 +140,10 @@ jobs:
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
       - name: Build .deb (smoke test)
-        run: VERSION=0.0.0-ci make package
+        # Plain numeric version — nfpm rewrites pre-release suffixes like
+        # "0.0.0-ci" to Debian's "~ci" convention, which complicates the
+        # filename for the install step below.
+        run: VERSION=0.0.0 make package
 
       - name: apt-install / dpkg -r roundtrip
         # Use apt-get to install: it resolves the mosquitto dep cleanly
@@ -150,7 +153,8 @@ jobs:
         # ./local.deb` is the documented way to install local packages.
         run: |
           set -ex
-          sudo apt-get install -y "./dist/mqtt-auth_0.0.0-ci_amd64.deb"
+          deb=$(ls dist/mqtt-auth_*.deb | head -1)
+          sudo apt-get install -y "./$deb"
           [ -f /usr/lib/mosquitto/plugins/mqtt-auth.so ]
           [ -x /usr/bin/mqtt-auth-verify ]
           [ -f /etc/mosquitto/conf.d/10-mqtt-auth.conf ]
