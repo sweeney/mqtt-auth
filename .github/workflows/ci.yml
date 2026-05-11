@@ -143,17 +143,36 @@ jobs:
         run: VERSION=0.0.0-ci make package
 
       - name: dpkg --install / --remove roundtrip
-        # Verbose output helps when this step fails in CI but the same
-        # commands pass locally — surfaces postinst stderr that's otherwise
-        # silently hidden.
+        # Capture each command's output to the step summary so a CI-only
+        # failure (postinst that succeeds locally but fails on a runner)
+        # can be diagnosed remotely without log-viewer access.
         run: |
-          set -x
-          sudo dpkg -i dist/mqtt-auth_0.0.0-ci_amd64.deb
-          test -f /usr/lib/mosquitto/plugins/mqtt-auth.so
-          test -x /usr/bin/mqtt-auth-verify
-          test -f /etc/mosquitto/conf.d/10-mqtt-auth.conf
-          mqtt-auth-verify -h | head -3
-          sudo dpkg -r mqtt-auth
+          set +e
+          {
+            echo "## dpkg roundtrip"
+            echo
+            echo '### dpkg -i'
+            echo '```'
+            sudo dpkg -i dist/mqtt-auth_0.0.0-ci_amd64.deb 2>&1
+            echo "exit=$?"
+            echo '```'
+            echo '### files in place'
+            echo '```'
+            ls -la /usr/lib/mosquitto/plugins/mqtt-auth.so 2>&1
+            ls -la /usr/bin/mqtt-auth-verify 2>&1
+            ls -la /etc/mosquitto/conf.d/10-mqtt-auth.conf 2>&1
+            echo '```'
+            echo '### dpkg -r'
+            echo '```'
+            sudo dpkg -r mqtt-auth 2>&1
+            echo "exit=$?"
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          # Assert the artifacts ended up where we expect — fails the step
+          # without losing the captured output above.
+          test -f /usr/lib/mosquitto/plugins/mqtt-auth.so && \
+          test -x /usr/bin/mqtt-auth-verify && \
+          test -f /etc/mosquitto/conf.d/10-mqtt-auth.conf || exit 1
 
       - uses: actions/upload-artifact@v4
         with:
