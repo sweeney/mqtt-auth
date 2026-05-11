@@ -109,10 +109,14 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Install mosquitto plugin headers
+      - name: Install mosquitto + plugin headers
+        # The plugin builds against libmosquitto-dev/mosquitto-dev. The
+        # mosquitto package itself is needed so dpkg can satisfy our
+        # .deb's `Depends: mosquitto` during the install roundtrip below.
         run: |
           sudo apt-get update
-          sudo apt-get install -y mosquitto-dev libmosquitto-dev
+          sudo apt-get install -y mosquitto mosquitto-dev libmosquitto-dev
+          sudo systemctl stop mosquitto || true
 
       - name: go vet ./plugin
         run: go vet ./plugin/...
