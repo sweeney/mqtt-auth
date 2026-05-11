@@ -8,6 +8,28 @@ authentication and ACL check. The Go core is the real implementation; the C
 glue is a thin bridge to mosquitto's plugin API (v4, supported by mosquitto
 2.0.21).
 
+## Install
+
+On Debian/Ubuntu with mosquitto already installed:
+
+```bash
+# Pinned tag:
+curl -fsSL https://github.com/sweeney/mqtt-auth/releases/download/v0.1.0/mqtt-auth_0.1.0_amd64.deb -o /tmp/mqtt-auth.deb
+sudo apt install /tmp/mqtt-auth.deb
+
+# Or via the convenience installer:
+curl -fsSL https://github.com/sweeney/mqtt-auth/releases/latest/download/install.sh | sh
+```
+
+The package drops:
+
+- `/usr/lib/mosquitto/plugins/mqtt-auth.so`
+- `/usr/bin/mqtt-auth-verify`
+- `/etc/mosquitto/conf.d/10-mqtt-auth.conf` *(conffile — your edits survive upgrades)*
+- `/usr/share/doc/mqtt-auth/production.mosquitto.conf`
+
+Postinst runs `systemctl try-restart mosquitto` so the plugin takes effect.
+
 ## Status
 
 v1: JWT verification only. ACL checks return allow; topic-level authorisation
@@ -25,12 +47,15 @@ principal (`usr` for user tokens, `client_id` for service tokens, RFC 9068).
 JWKS is cached in-memory for 5 minutes by default. Key rotations are picked up
 automatically on the next `kid` miss.
 
-## Build
+## Build from source
 
 ```bash
-sudo apt install mosquitto-dev libmosquitto-dev   # plugin headers
-make plugin                                        # bin/mqtt-auth.so
-make verify                                        # bin/mqtt-auth-verify
+sudo apt install mosquitto-dev libmosquitto-dev gettext-base   # plugin headers + envsubst
+go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.41.0      # only needed for `make package`
+
+make plugin                       # bin/mqtt-auth.so
+make verify                       # bin/mqtt-auth-verify
+make package VERSION=0.1.0        # dist/mqtt-auth_0.1.0_amd64.deb
 ```
 
 ## Debug a token

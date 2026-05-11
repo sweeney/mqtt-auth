@@ -127,10 +127,34 @@ jobs:
         run: |
           nm -D bin/mqtt-auth.so | grep -E "mosquitto_auth_(plugin_version|plugin_init|plugin_cleanup|unpwd_check|acl_check|security_init|security_cleanup)"
 
+      - name: Install nfpm and envsubst
+        # `make package` builds the .deb. nfpm produces it from packaging/nfpm.yaml
+        # after envsubst expands $VERSION. Both are cheap installs (~5s combined).
+        run: |
+          go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.41.0
+          sudo apt-get install -y gettext-base
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Build .deb (smoke test)
+        run: VERSION=0.0.0-ci make package
+
+      - name: dpkg --install / --remove roundtrip
+        run: |
+          sudo dpkg -i dist/mqtt-auth_0.0.0-ci_amd64.deb
+          test -f /usr/lib/mosquitto/plugins/mqtt-auth.so
+          test -x /usr/bin/mqtt-auth-verify
+          test -f /etc/mosquitto/conf.d/10-mqtt-auth.conf
+          sudo dpkg -r mqtt-auth
+
       - uses: actions/upload-artifact@v4
         with:
           name: mqtt-auth-plugin
           path: bin/mqtt-auth.so
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mqtt-auth-deb
+          path: dist/*.deb
 
   fuzz:
     name: Fuzz (30s per target)

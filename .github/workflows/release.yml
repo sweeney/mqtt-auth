@@ -1,0 +1,87 @@
+name: Release
+
+# Triggered by pushing a v* tag (e.g. v0.1.0). Builds the plugin, the CLI,
+# a .deb, and a tarball; attaches them all to a GitHub Release.
+#
+# Tag, don't push the release manually — that way `git describe` gives a
+# clean version number embedded in the artifacts.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Override version (default: read from tag or git describe)"
+        required: false
+
+permissions:
+  contents: write   # needed to create the Release and upload artifacts
+
+jobs:
+  build:
+    name: Build artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # for `git describe`
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install mosquitto headers + nfpm
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mosquitto-dev libmosquitto-dev
+          go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.41.0
+
+      - name: Resolve version
+        id: ver
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            v="${{ inputs.version }}"
+          elif [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            v="${GITHUB_REF_NAME#v}"
+          else
+            v="$(git describe --tags --always --dirty)"
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "Resolved VERSION=$v"
+
+      - name: Build .deb and tarball
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: make package tarball
+
+      - name: Show artifact contents (for the audit trail in the run log)
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          echo "::group::deb contents"
+          dpkg-deb -c dist/mqtt-auth_${VERSION}_amd64.deb
+          echo "::endgroup::"
+          echo "::group::tarball contents"
+          tar -tzf dist/mqtt-auth_${VERSION}_linux_amd64.tar.gz
+          echo "::endgroup::"
+
+      - name: Upload to GitHub Release
+        # Only on real tag pushes — workflow_dispatch builds the artifacts
+        # but doesn't create a release.
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/mqtt-auth_*.deb
+            dist/mqtt-auth_*.tar.gz
+          generate_release_notes: true
+
+      - name: Upload artifacts for manual download
+        # Always upload so workflow_dispatch builds are testable.
+        uses: actions/upload-artifact@v4
+        with:
+          name: mqtt-auth-${{ steps.ver.outputs.version }}
+          path: dist/
+          retention-days: 30

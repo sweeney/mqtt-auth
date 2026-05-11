@@ -1,0 +1,70 @@
+# nfpm config for building the mqtt-auth Debian package.
+#
+# Build locally:   make package
+# CI builds via:   nfpm pkg --packager deb --target dist/
+#
+# VERSION is templated from the environment; defaults to 0.0.0-dev for local
+# builds so you can `dpkg -i` without managing tags.
+
+name: mqtt-auth
+arch: amd64
+platform: linux
+version: ${VERSION}
+section: net
+priority: optional
+maintainer: "mqtt-auth maintainers <admin@swee.net>"
+description: |
+  Mosquitto MQTT broker auth plugin that validates JWTs issued by id.swee.net.
+  Drops a .so into mosquitto's plugin path and a drop-in config under
+  /etc/mosquitto/conf.d/.
+vendor: "swee.net"
+homepage: "https://github.com/sweeney/mqtt-auth"
+license: "MIT"
+
+# Depend on mosquitto so apt refuses to install us on a host without it.
+# Loose version pin: tested against 2.0; the plugin API hasn't changed
+# within the 2.x series so >=2.0 is fine.
+depends:
+  - mosquitto (>= 2.0)
+
+# Paths are relative to the working directory nfpm is invoked from. The
+# Makefile runs `nfpm pkg` from the repo root, so paths below are
+# repo-root-relative.
+contents:
+  # The plugin itself. Lives in mosquitto's plugin directory so the path in
+  # the drop-in config is stable and discoverable.
+  - src: bin/mqtt-auth.so
+    dst: /usr/lib/mosquitto/plugins/mqtt-auth.so
+    file_info:
+      mode: 0644
+
+  # The debug CLI. /usr/bin so it's on PATH for operators.
+  - src: bin/mqtt-auth-verify
+    dst: /usr/bin/mqtt-auth-verify
+    file_info:
+      mode: 0755
+
+  # Drop-in config. type=config marks it as a conffile so dpkg preserves
+  # operator edits across upgrades and prompts on conflict — important
+  # because the issuer URL is environment-specific.
+  - src: packaging/mqtt-auth.conf
+    dst: /etc/mosquitto/conf.d/10-mqtt-auth.conf
+    type: config
+    file_info:
+      mode: 0644
+
+  # Documentation: the README, the example production config, the LICENSE.
+  - src: README.md
+    dst: /usr/share/doc/mqtt-auth/README.md
+  - src: examples/production.mosquitto.conf
+    dst: /usr/share/doc/mqtt-auth/production.mosquitto.conf
+  - src: LICENSE
+    dst: /usr/share/doc/mqtt-auth/copyright
+
+# Restart mosquitto on install/upgrade so the new .so takes effect. The
+# prerm note tells operators what to do on uninstall — we deliberately
+# don't auto-disable auth on remove (better to refuse all connects than
+# silently allow anonymous).
+scripts:
+  postinstall: packaging/postinstall.sh
+  preremove: packaging/preremove.sh
