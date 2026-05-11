@@ -137,3 +137,43 @@ jobs:
           cache: true
       - name: Fuzz JWT parse path
         run: go test ./internal/auth/ -run='^$' -fuzz=FuzzVerifierParse -fuzztime=30s
+
+  e2e:
+    name: End-to-end (real mosquitto)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install mosquitto + plugin headers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mosquitto mosquitto-dev libmosquitto-dev
+          # The package starts a system mosquitto on :1883 — stop it so our
+          # ephemeral-port instances are the only brokers running.
+          sudo systemctl stop mosquitto || true
+          mosquitto -h | head -1
+
+      - name: Build plugin
+        run: make plugin
+
+      - name: Run e2e suite
+        run: |
+          set +e
+          out=$(go test -tags=e2e -v ./test/e2e/... 2>&1)
+          rc=$?
+          if [ $rc -ne 0 ]; then
+            {
+              echo "## e2e failed"
+              echo '```'
+              echo "$out"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "$out"
+            exit $rc
+          fi
+          echo "$out"
