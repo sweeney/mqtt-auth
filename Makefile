@@ -32,6 +32,10 @@ test:
 test-race:
 	$(GO) test -race ./internal/...
 
+# Requires libmosquitto/mosquitto-dev installed.
+test-plugin:
+	$(GO) test -tags=mqttauth_plugintest ./plugin/...
+
 cover:
 	$(GO) test -coverprofile=coverage.out ./internal/...
 	$(GO) tool cover -html=coverage.out -o coverage.html

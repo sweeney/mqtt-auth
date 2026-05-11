@@ -114,6 +114,9 @@ jobs:
       - name: go vet ./plugin
         run: go vet ./plugin/...
 
+      - name: Plugin cgo tests
+        run: go test -tags=mqttauth_plugintest -v ./plugin/...
+
       - name: Build mqtt-auth.so
         run: make plugin
 

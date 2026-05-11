@@ -24,6 +24,24 @@
 
 #include "_cgo_export.h"
 
+/*
+ * Broker-only symbols are resolved at .so load time by mosquitto. In test
+ * builds the test binary tries to link them at compile time, which fails.
+ * Wrapping the only such call (mosquitto_client_username) behind a static
+ * helper lets us swap it for a NULL-returning stub when MQTT_AUTH_TESTING
+ * is defined via #cgo CFLAGS in plugin_test.go.
+ */
+#ifdef MQTT_AUTH_TESTING
+static const char *plugin_client_username(const struct mosquitto *client) {
+    (void)client;
+    return NULL;
+}
+#else
+static const char *plugin_client_username(const struct mosquitto *client) {
+    return mosquitto_client_username(client);
+}
+#endif
+
 int mosquitto_auth_plugin_version(void) {
     return MOSQ_AUTH_PLUGIN_VERSION;
 }
@@ -91,7 +109,7 @@ int mosquitto_auth_unpwd_check(void *user_data, struct mosquitto *client, const 
 int mosquitto_auth_acl_check(void *user_data, int access, struct mosquitto *client, const struct mosquitto_acl_msg *msg) {
     (void)user_data;
     (void)client;
-    const char *username = mosquitto_client_username(client);
+    const char *username = plugin_client_username(client);
     const char *topic = (msg != NULL) ? msg->topic : NULL;
     return (int)AuthAclCheck((char *)username, (char *)topic, access);
 }
