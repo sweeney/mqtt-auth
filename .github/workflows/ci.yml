@@ -25,7 +25,7 @@ jobs:
       - name: go vet
         run: |
           set +e
-          out=$(go vet ./internal/... 2>&1)
+          out=$(go vet ./internal/... ./cmd/... 2>&1)
           rc=$?
           if [ $rc -ne 0 ]; then
             {
@@ -41,7 +41,7 @@ jobs:
       - name: Unit tests with race detector
         run: |
           set +e
-          out=$(go test -race -coverprofile=coverage.out ./internal/... 2>&1)
+          out=$(go test -race -coverprofile=coverage.out ./internal/... ./cmd/... 2>&1)
           rc=$?
           if [ $rc -ne 0 ]; then
             {
@@ -54,6 +54,9 @@ jobs:
             exit $rc
           fi
           echo "$out"
+
+      - name: Build mqtt-auth-verify CLI
+        run: make verify
 
       - name: Coverage summary
         run: go tool cover -func=coverage.out | tail -1
@@ -79,7 +82,7 @@ jobs:
           set +e
           ver=$($(go env GOPATH)/bin/staticcheck -version)
           # ./plugin needs cgo + mosquitto headers; lint it in the cgo-build job.
-          out=$($(go env GOPATH)/bin/staticcheck ./internal/... 2>&1)
+          out=$($(go env GOPATH)/bin/staticcheck ./internal/... ./cmd/... 2>&1)
           rc=$?
           if [ $rc -ne 0 ]; then
             {

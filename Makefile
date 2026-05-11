@@ -22,7 +22,7 @@ plugin:
 	CGO_CFLAGS="$(CFLAGS)" CGO_LDFLAGS="$(LDFLAGS)" \
 		$(GO) build -buildmode=c-shared -o $(BIN_DIR)/$(PLUGIN_NAME) ./$(PLUGIN_DIR)
 
-verify-cli:
+verify:
 	@mkdir -p $(BIN_DIR)
 	$(GO) build -o $(BIN_DIR)/mqtt-auth-verify ./cmd/verify
 

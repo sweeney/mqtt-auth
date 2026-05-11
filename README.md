@@ -28,9 +28,23 @@ automatically on the next `kid` miss.
 ## Build
 
 ```bash
-sudo apt install libmosquitto-dev   # provides mosquitto_plugin.h
-make plugin                          # produces bin/mqtt-auth.so
+sudo apt install mosquitto-dev libmosquitto-dev   # plugin headers
+make plugin                                        # bin/mqtt-auth.so
+make verify                                        # bin/mqtt-auth-verify
 ```
+
+## Debug a token
+
+`mqtt-auth-verify` reproduces the plugin's verdict outside the broker — useful
+when a client is being refused and you want to know why.
+
+```bash
+echo "$JWT" | bin/mqtt-auth-verify
+bin/mqtt-auth-verify -username alice "$JWT"
+bin/mqtt-auth-verify -json -file /tmp/token | jq
+```
+
+Exit codes: `0` accept, `1` deny, `2` plumbing (JWKS unreachable etc.).
 
 ## Configure mosquitto
 
